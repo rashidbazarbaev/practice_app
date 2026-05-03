@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "463972160093",
+    "project_id": "bazarbaev-kasymov",
+    "storage_bucket": "bazarbaev-kasymov.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:463972160093:android:bfde1337e5d3bff279b3b4",
+        "android_client_info": {
+          "package_name": "com.example.practice_university"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAaFE2g2iv2wqEM4taIqIGWeP8j0rV5pGk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

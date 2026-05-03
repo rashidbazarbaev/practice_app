@@ -1,0 +1,48 @@
+name: practice_university
+description: "Student Progress Tracker - учёт успеваемости студента"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  # State management
+  provider: ^6.1.2
+  # Local storage
+  shared_preferences: ^2.3.2
+  # Unique IDs
+  uuid: ^4.5.1
+  # Date formatting
+  intl: ^0.19.0
+  # Charts
+  fl_chart: ^0.69.0
+  # Table calendar
+  table_calendar: ^3.1.2
+  # Local notifications
+  flutter_local_notifications: ^18.0.1
+  # Timezone support for notifications
+  timezone: ^0.9.4
+  # Image picker for avatar
+  image_picker: ^1.1.2
+  # Firebase
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.2
+  cloud_firestore: ^5.6.6
+  firebase_storage: ^12.4.4
+  # Google Sign-In
+  google_sign_in: ^6.2.2
+  # HTTP for schedule fetching
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
