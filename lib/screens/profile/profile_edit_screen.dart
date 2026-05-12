@@ -20,7 +20,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late TextEditingController _nameCtrl;
   late TextEditingController _facultyCtrl;
   late int _course;
-  late double _gpa;
   String? _avatarPath;
   bool _isSaving = false;
 
@@ -30,7 +29,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _nameCtrl = TextEditingController(text: widget.student.name);
     _facultyCtrl = TextEditingController(text: widget.student.faculty);
     _course = widget.student.course;
-    _gpa = widget.student.gpa;
     _avatarPath = widget.student.avatarPath;
   }
 
@@ -147,7 +145,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         name: _nameCtrl.text.trim(),
         faculty: _facultyCtrl.text.trim(),
         course: _course,
-        gpa: _gpa,
         avatarPath: _avatarPath,
       ),
     );
@@ -162,18 +159,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Редактировать профиль'),
-        actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _save,
-            child: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Сохранить'),
-          ),
-        ],
+        titleSpacing: 0,
       ),
       body: Form(
         key: _formKey,
@@ -293,18 +279,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               max: 6,
               divisions: 5,
               onChanged: (v) => setState(() => _course = v.toInt()),
-            ),
-            const SizedBox(height: 8),
-
-            // GPA
-            _SliderField(
-              label: 'GPA',
-              displayValue: _gpa.toStringAsFixed(2),
-              value: _gpa,
-              min: 0,
-              max: 5,
-              divisions: 100,
-              onChanged: (v) => setState(() => _gpa = v),
             ),
             const SizedBox(height: 32),
 

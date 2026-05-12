@@ -58,9 +58,9 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${student?.faculty ?? ''}'),
+                      Text(student?.faculty ?? ''),
                       Text(
-                        '${student?.course ?? 1} курс • GPA ${student?.gpa.toStringAsFixed(1) ?? '—'}',
+                        '${student?.course ?? 1} курс',
                         style: TextStyle(
                           fontSize: 12,
                           color: theme.colorScheme.primary,

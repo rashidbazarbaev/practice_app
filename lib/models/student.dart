@@ -3,7 +3,6 @@ class Student {
   String name;
   String faculty;
   int course;
-  double gpa;
   String? avatarPath;
 
   Student({
@@ -11,7 +10,6 @@ class Student {
     required this.name,
     required this.faculty,
     required this.course,
-    required this.gpa,
     this.avatarPath,
   });
 
@@ -20,7 +18,6 @@ class Student {
         'name': name,
         'faculty': faculty,
         'course': course,
-        'gpa': gpa,
         'avatarPath': avatarPath,
       };
 
@@ -29,7 +26,6 @@ class Student {
         name: json['name'],
         faculty: json['faculty'],
         course: json['course'],
-        gpa: (json['gpa'] as num).toDouble(),
         avatarPath: json['avatarPath'],
       );
 
@@ -37,7 +33,6 @@ class Student {
     String? name,
     String? faculty,
     int? course,
-    double? gpa,
     String? avatarPath,
   }) =>
       Student(
@@ -45,7 +40,6 @@ class Student {
         name: name ?? this.name,
         faculty: faculty ?? this.faculty,
         course: course ?? this.course,
-        gpa: gpa ?? this.gpa,
         avatarPath: avatarPath ?? this.avatarPath,
       );
 }

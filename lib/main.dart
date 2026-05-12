@@ -11,6 +11,7 @@ import 'providers/note_provider.dart';
 import 'providers/pomodoro_provider.dart';
 import 'providers/auth_provider.dart' as app_auth;
 import 'providers/schedule_provider.dart';
+import 'providers/material_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_screen.dart';
 
@@ -37,6 +38,7 @@ class StudentProgressApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NoteProvider()),
         ChangeNotifierProvider(create: (_) => PomodoroProvider()),
         ChangeNotifierProvider(create: (_) => ScheduleProvider()),
+        ChangeNotifierProvider(create: (_) => MaterialProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProv, _) => MaterialApp(

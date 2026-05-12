@@ -11,14 +11,15 @@ class TaskProvider extends ChangeNotifier {
   List<Task> get tasks => _tasks;
 
   List<Task> get pendingTasks => _tasks
-      .where((t) => t.status == TaskStatus.pending || t.status == TaskStatus.inProgress)
+      .where((t) =>
+          t.status == TaskStatus.pending ||
+          t.status == TaskStatus.inProgress)
       .toList()
     ..sort((a, b) => a.deadline.compareTo(b.deadline));
 
   List<Task> get upcomingTasks => pendingTasks.take(5).toList();
 
-  List<Task> get overdueTasks =>
-      _tasks.where((t) => t.isOverdue).toList();
+  List<Task> get overdueTasks => _tasks.where((t) => t.isOverdue).toList();
 
   List<Task> getTasksForDay(DateTime day) {
     return _tasks.where((t) {
@@ -46,6 +47,27 @@ class TaskProvider extends ChangeNotifier {
 
   int get totalCount => _tasks.length;
 
+  /// Returns count of completed tasks per weekday for the current week.
+  /// Index 0 = Monday, 6 = Sunday.
+  List<int> get completedPerWeekday {
+    final now = DateTime.now();
+    // Start of current week (Monday)
+    final weekStart =
+        DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    final counts = List<int>.filled(7, 0);
+    for (final task in _tasks) {
+      if (task.status == TaskStatus.completed) {
+        final day = DateTime(
+            task.deadline.year, task.deadline.month, task.deadline.day);
+        final diff = day.difference(weekStart).inDays;
+        if (diff >= 0 && diff < 7) {
+          counts[diff]++;
+        }
+      }
+    }
+    return counts;
+  }
+
   TaskProvider() {
     _loadData();
   }
@@ -57,8 +79,6 @@ class TaskProvider extends ChangeNotifier {
       final list = jsonDecode(json) as List;
       _tasks = list.map((e) => Task.fromJson(e)).toList();
       _updateOverdueStatuses();
-    } else {
-      _tasks = _mockTasks();
     }
     notifyListeners();
   }
@@ -71,99 +91,6 @@ class TaskProvider extends ChangeNotifier {
         task.status = TaskStatus.overdue;
       }
     }
-  }
-
-  List<Task> _mockTasks() {
-    final now = DateTime.now();
-    return [
-      Task(
-        id: _uuid.v4(),
-        title: 'Лабораторная работа №3',
-        description: 'Реализовать алгоритм сортировки на Python',
-        subjectId: 'prog',
-        subjectName: 'Программирование',
-        deadline: now.add(const Duration(days: 2)),
-        recommendedStartDate: now.subtract(const Duration(days: 1)),
-        status: TaskStatus.inProgress,
-        priority: TaskPriority.high,
-        type: TaskType.assignment,
-        estimatedMinutes: 120,
-        complexityNote: 'Средняя сложность',
-        createdAt: now.subtract(const Duration(days: 3)),
-      ),
-      Task(
-        id: _uuid.v4(),
-        title: 'Контрольная по матанализу',
-        description: 'Темы: пределы, производные, интегралы',
-        subjectId: 'math',
-        subjectName: 'Математический анализ',
-        deadline: now.add(const Duration(days: 5)),
-        recommendedStartDate: now.add(const Duration(days: 1)),
-        status: TaskStatus.pending,
-        priority: TaskPriority.critical,
-        type: TaskType.exam,
-        estimatedMinutes: 90,
-        complexityNote: 'Высокая сложность',
-        createdAt: now.subtract(const Duration(days: 2)),
-      ),
-      Task(
-        id: _uuid.v4(),
-        title: 'Эссе по истории',
-        description: 'Тема: Реформы Петра I и их влияние',
-        subjectId: 'hist',
-        subjectName: 'История',
-        deadline: now.add(const Duration(days: 7)),
-        status: TaskStatus.pending,
-        priority: TaskPriority.medium,
-        type: TaskType.assignment,
-        estimatedMinutes: 60,
-        complexityNote: 'Низкая сложность',
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-      Task(
-        id: _uuid.v4(),
-        title: 'Словарный диктант',
-        description: 'Unit 5-6, 50 слов',
-        subjectId: 'eng',
-        subjectName: 'Английский язык',
-        deadline: now.add(const Duration(days: 1)),
-        status: TaskStatus.pending,
-        priority: TaskPriority.high,
-        type: TaskType.exam,
-        estimatedMinutes: 30,
-        complexityNote: 'Низкая сложность',
-        createdAt: now,
-      ),
-      Task(
-        id: _uuid.v4(),
-        title: 'Отчёт по физике',
-        description: 'Лабораторная работа: законы Ньютона',
-        subjectId: 'phys',
-        subjectName: 'Физика',
-        deadline: now.subtract(const Duration(days: 1)),
-        status: TaskStatus.overdue,
-        priority: TaskPriority.high,
-        type: TaskType.assignment,
-        estimatedMinutes: 90,
-        complexityNote: 'Средняя сложность',
-        createdAt: now.subtract(const Duration(days: 5)),
-      ),
-      Task(
-        id: _uuid.v4(),
-        title: 'Домашнее задание по матанализу',
-        description: 'Задачи 1-15 из главы 4',
-        subjectId: 'math',
-        subjectName: 'Математический анализ',
-        deadline: now.subtract(const Duration(days: 3)),
-        status: TaskStatus.completed,
-        priority: TaskPriority.medium,
-        type: TaskType.assignment,
-        estimatedMinutes: 60,
-        actualMinutes: 75,
-        complexityNote: 'Средняя сложность',
-        createdAt: now.subtract(const Duration(days: 7)),
-      ),
-    ];
   }
 
   Future<void> _saveData() async {
@@ -212,7 +139,6 @@ class TaskProvider extends ChangeNotifier {
       TaskPriority.high: 3,
       TaskPriority.critical: 5,
     };
-    return deadline
-        .subtract(Duration(days: daysBeforeMap[priority] ?? 2));
+    return deadline.subtract(Duration(days: daysBeforeMap[priority] ?? 2));
   }
 }

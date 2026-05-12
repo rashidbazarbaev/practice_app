@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/student_provider.dart';
-import '../../providers/pomodoro_provider.dart';
 import '../../models/task.dart';
+import '../../models/subject.dart';
 import '../../utils/color_utils.dart';
-import '../../utils/label_utils.dart';
+import '../subjects/subject_form_screen.dart';
 
 class AnalyticsScreen extends StatelessWidget {
   const AnalyticsScreen({super.key});
@@ -15,35 +15,19 @@ class AnalyticsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final taskProv = context.watch<TaskProvider>();
     final studentProv = context.watch<StudentProvider>();
-    final pomodoroProv = context.watch<PomodoroProvider>();
-    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Аналитика')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Summary stats
-          _SummaryRow(
-            taskProv: taskProv,
-            pomodoroMinutes: pomodoroProv.totalMinutesStudied,
-          ),
+          _SummaryRow(taskProv: taskProv),
           const SizedBox(height: 16),
-
-          // Grade chart
-          _GradeChart(subjects: studentProv.subjects),
+          _SubjectProgressCard(subjects: studentProv.subjects),
           const SizedBox(height: 16),
-
-          // Task distribution pie
           _TaskDistributionCard(tasks: taskProv.tasks),
           const SizedBox(height: 16),
-
-          // Weekly activity
           _WeeklyActivityCard(tasks: taskProv.tasks),
-          const SizedBox(height: 16),
-
-          // Subject performance
-          _SubjectPerformanceCard(subjects: studentProv.subjects),
           const SizedBox(height: 80),
         ],
       ),
@@ -53,10 +37,8 @@ class AnalyticsScreen extends StatelessWidget {
 
 class _SummaryRow extends StatelessWidget {
   final TaskProvider taskProv;
-  final int pomodoroMinutes;
 
-  const _SummaryRow(
-      {required this.taskProv, required this.pomodoroMinutes});
+  const _SummaryRow({required this.taskProv});
 
   @override
   Widget build(BuildContext context) {
@@ -78,21 +60,21 @@ class _SummaryRow extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: _StatCard(
-            label: 'Процент',
-            value: '${(completionRate * 100).toInt()}%',
-            subtitle: 'выполнения',
+            label: 'Всего',
+            value: '${taskProv.totalCount}',
+            subtitle: 'задач',
             color: const Color(0xFF2196F3),
-            icon: Icons.pie_chart_outline,
+            icon: Icons.assignment_outlined,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: _StatCard(
-            label: 'Pomodoro',
-            value: '${pomodoroMinutes ~/ 60}ч',
-            subtitle: '${pomodoroMinutes % 60}мин',
-            color: const Color(0xFFFF5722),
-            icon: Icons.timer_outlined,
+            label: 'Выполнения',
+            value: '${(completionRate * 100).toInt()}%',
+            subtitle: 'процент',
+            color: const Color(0xFFFF9800),
+            icon: Icons.pie_chart_outline,
           ),
         ),
       ],
@@ -152,27 +134,41 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _GradeChart extends StatelessWidget {
-  final List subjects;
+class _SubjectProgressCard extends StatelessWidget {
+  final List<Subject> subjects;
 
-  const _GradeChart({required this.subjects});
+  const _SubjectProgressCard({required this.subjects});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Mock monthly grade data
-    final mockData = [
-      [68.0, 72.0, 75.0, 78.0, 80.0, 83.0],
-      [85.0, 87.0, 88.0, 90.0, 91.0, 92.0],
-      [55.0, 58.0, 62.0, 63.0, 65.0, 65.0],
-    ];
+    if (subjects.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.school_outlined, color: theme.colorScheme.outline),
+              const SizedBox(width: 12),
+              Text(
+                'Нет предметов',
+                style: TextStyle(color: theme.colorScheme.outline),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
-    final colors = [
-      theme.colorScheme.primary,
-      const Color(0xFF4CAF50),
-      const Color(0xFFFF9800),
-    ];
+    final sorted = [...subjects]
+      ..sort((a, b) =>
+          (a.currentGrade - a.targetGrade)
+              .compareTo(b.currentGrade - b.targetGrade));
+
+    final avg = subjects.fold<double>(
+            0, (s, e) => s + e.currentGrade) /
+        subjects.length;
 
     return Card(
       child: Padding(
@@ -184,133 +180,97 @@ class _GradeChart extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Успеваемость по месяцам',
+                  'Прогресс по предметам',
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                      horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(6),
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'Mock данные',
+                    'Ср. ${avg.toInt()}%',
                     style: TextStyle(
-                      fontSize: 10,
-                      color: theme.colorScheme.onErrorContainer,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            ...sorted.map((s) => _SubjectBar(subject: s)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubjectBar extends StatelessWidget {
+  final Subject subject;
+
+  const _SubjectBar({required this.subject});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = ColorUtils.fromHex(subject.color);
+    final progress = subject.currentGrade.clamp(0.0, 100.0);
+    final isDone = progress >= 100;
+
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SubjectFormScreen(subject: subject),
+        ),
+      ),
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
             SizedBox(
-              height: 180,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (v) => FlLine(
-                      color: theme.colorScheme.outline.withOpacity(0.1),
-                      strokeWidth: 1,
-                    ),
-                  ),
-                  titlesData: FlTitlesData(
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 32,
-                        interval: 20,
-                        getTitlesWidget: (v, _) => Text(
-                          v.toInt().toString(),
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: theme.colorScheme.outline),
-                        ),
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (v, _) {
-                          const months = [
-                            'Сен',
-                            'Окт',
-                            'Ноя',
-                            'Дек',
-                            'Янв',
-                            'Фев'
-                          ];
-                          final i = v.toInt();
-                          if (i < 0 || i >= months.length) {
-                            return const SizedBox.shrink();
-                          }
-                          return Text(months[i],
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: theme.colorScheme.outline));
-                        },
-                      ),
-                    ),
-                    rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                    topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  minX: 0,
-                  maxX: 5,
-                  minY: 40,
-                  maxY: 100,
-                  lineBarsData: List.generate(
-                    mockData.length,
-                    (i) => LineChartBarData(
-                      spots: List.generate(
-                        mockData[i].length,
-                        (j) => FlSpot(j.toDouble(), mockData[i][j]),
-                      ),
-                      isCurved: true,
-                      color: colors[i],
-                      barWidth: 2,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: colors[i].withOpacity(0.05),
-                      ),
-                    ),
+              width: 110,
+              child: Text(
+                subject.name,
+                style: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w500),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(5),
+                child: LinearProgressIndicator(
+                  value: progress / 100,
+                  minHeight: 10,
+                  backgroundColor:
+                      theme.colorScheme.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isDone ? const Color(0xFF4CAF50) : color,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                3,
-                (i) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 3,
-                        color: colors[i],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        i < subjects.length
-                            ? (subjects[i].name as String)
-                                .split(' ')
-                                .first
-                            : 'Предмет ${i + 1}',
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    ],
-                  ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 42,
+              child: Text(
+                isDone ? 'Сдан' : '${progress.toInt()}%',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDone ? const Color(0xFF4CAF50) : color,
                 ),
+                textAlign: TextAlign.right,
               ),
             ),
           ],
@@ -487,9 +447,13 @@ class _WeeklyActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Mock weekly completed tasks data
-    final data = [2.0, 1.0, 3.0, 0.0, 2.0, 4.0, 1.0];
+    final taskProv = context.read<TaskProvider>();
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+    // Real data: completed tasks per weekday of current week
+    final counts = taskProv.completedPerWeekday;
+    final maxY = counts.reduce((a, b) => a > b ? a : b).toDouble();
+    final chartMax = maxY < 3 ? 5.0 : maxY + 1;
 
     return Card(
       child: Padding(
@@ -508,8 +472,20 @@ class _WeeklyActivityCard extends StatelessWidget {
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
-                  maxY: 5,
-                  barTouchData: BarTouchData(enabled: false),
+                  maxY: chartMax,
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                          BarTooltipItem(
+                        '${counts[group.x]} задач',
+                        const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12),
+                      ),
+                    ),
+                  ),
                   titlesData: FlTitlesData(
                     leftTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false)),
@@ -520,12 +496,27 @@ class _WeeklyActivityCard extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        getTitlesWidget: (v, _) => Text(
-                          days[v.toInt()],
-                          style: TextStyle(
+                        getTitlesWidget: (v, _) {
+                          final i = v.toInt();
+                          if (i < 0 || i >= days.length) {
+                            return const SizedBox.shrink();
+                          }
+                          // Highlight today
+                          final todayIndex =
+                              DateTime.now().weekday - 1; // 0=Mon
+                          return Text(
+                            days[i],
+                            style: TextStyle(
                               fontSize: 11,
-                              color: theme.colorScheme.outline),
-                        ),
+                              fontWeight: i == todayIndex
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: i == todayIndex
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.outline,
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -533,108 +524,28 @@ class _WeeklyActivityCard extends StatelessWidget {
                   borderData: FlBorderData(show: false),
                   barGroups: List.generate(
                     7,
-                    (i) => BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: data[i],
-                          color: theme.colorScheme.primary,
-                          width: 20,
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(4)),
-                        ),
-                      ],
-                    ),
+                    (i) {
+                      final todayIndex = DateTime.now().weekday - 1;
+                      return BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: counts[i].toDouble(),
+                            color: i == todayIndex
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.primary
+                                    .withValues(alpha: 0.5),
+                            width: 20,
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(4)),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SubjectPerformanceCard extends StatelessWidget {
-  final List subjects;
-
-  const _SubjectPerformanceCard({required this.subjects});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Успеваемость по предметам',
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            ...subjects.map((s) {
-              final color = ColorUtils.fromHex(s.color as String);
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            s.name as String,
-                            style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          '${(s.currentGrade as double).toInt()} / ${(s.targetGrade as double).toInt()}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.outline,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: (s.targetGrade as double) / 100,
-                            backgroundColor: color.withOpacity(0.1),
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(color.withOpacity(0.3)),
-                            minHeight: 8,
-                          ),
-                        ),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: (s.currentGrade as double) / 100,
-                            backgroundColor: Colors.transparent,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(color),
-                            minHeight: 8,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }),
           ],
         ),
       ),

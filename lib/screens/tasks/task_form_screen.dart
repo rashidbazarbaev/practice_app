@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../providers/schedule_provider.dart';
 import '../../models/task.dart';
 import '../../utils/label_utils.dart';
 import '../../utils/date_utils.dart';
@@ -20,6 +21,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleCtrl;
   late TextEditingController _descCtrl;
+  late TextEditingController _subjectCtrl;
 
   String? _subjectId;
   String _subjectName = '';
@@ -34,6 +36,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     final t = widget.task;
     _titleCtrl = TextEditingController(text: t?.title ?? '');
     _descCtrl = TextEditingController(text: t?.description ?? '');
+    _subjectCtrl = TextEditingController(text: t?.subjectName ?? '');
     _subjectId = t?.subjectId;
     _subjectName = t?.subjectName ?? '';
     _deadline = t?.deadline ??
@@ -48,14 +51,24 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   void dispose() {
     _titleCtrl.dispose();
     _descCtrl.dispose();
+    _subjectCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final studentProv = context.watch<StudentProvider>();
+    final scheduleProv = context.watch<ScheduleProvider>();
     final taskProv = context.read<TaskProvider>();
     final isEdit = widget.task != null;
+
+    // Build subject suggestions: from schedule + from already added subjects
+    final scheduleSubjects = scheduleProv.uniqueSubjectNames;
+    final savedSubjects = studentProv.subjects.map((s) => s.name).toList();
+    final allSubjectNames = {
+      ...savedSubjects,
+      ...scheduleSubjects,
+    }.toList()..sort();
 
     return Scaffold(
       appBar: AppBar(
@@ -100,30 +113,22 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Subject
-            DropdownButtonFormField<String>(
-              value: _subjectId,
-              decoration: const InputDecoration(
-                labelText: 'Предмет *',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.school_outlined),
-              ),
-              items: studentProv.subjects
-                  .map((s) => DropdownMenuItem(
-                        value: s.id,
-                        child: Text(s.name),
-                      ))
-                  .toList(),
-              onChanged: (val) {
+            // Subject — autocomplete
+            _SubjectAutocomplete(
+              controller: _subjectCtrl,
+              suggestions: allSubjectNames,
+              onSelected: (name) {
                 setState(() {
-                  _subjectId = val;
-                  _subjectName = studentProv.subjects
-                      .firstWhere((s) => s.id == val,
-                          orElse: () => studentProv.subjects.first)
-                      .name;
+                  _subjectName = name;
+                  // Try to find existing subject id, else use slug
+                  final existing = studentProv.subjects
+                      .where((s) =>
+                          s.name.toLowerCase() == name.toLowerCase())
+                      .firstOrNull;
+                  _subjectId = existing?.id ??
+                      name.toLowerCase().replaceAll(' ', '_');
                 });
               },
-              validator: (v) => v == null ? 'Выберите предмет' : null,
             ),
             const SizedBox(height: 16),
 
@@ -172,7 +177,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? color
-                                  : color.withOpacity(0.1),
+                                  : color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: color,
@@ -199,18 +204,21 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
             const SizedBox(height: 16),
 
             // Deadline
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Дедлайн'),
-              subtitle: Text(AppDateUtils.formatDateTime(_deadline)),
-              trailing: const Icon(Icons.chevron_right),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(
-                    color: Theme.of(context).colorScheme.outline),
-              ),
+            InkWell(
               onTap: () => _pickDeadline(context),
+              borderRadius: BorderRadius.circular(4),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Дедлайн',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today),
+                  suffixIcon: Icon(Icons.chevron_right),
+                ),
+                child: Text(
+                  AppDateUtils.formatDateTime(_deadline),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -233,54 +241,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               ),
               const SizedBox(height: 16),
             ],
-
-            // AI stub: recommended start date
-            Card(
-              color: Theme.of(context).colorScheme.secondaryContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Icon(Icons.auto_awesome,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSecondaryContainer,
-                        size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Рекомендуемая дата начала',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSecondaryContainer,
-                            ),
-                          ),
-                          Text(
-                            AppDateUtils.formatDate(
-                              taskProv.computeRecommendedStart(
-                                  _deadline, _priority),
-                            ),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSecondaryContainer,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
 
             // Save button
             FilledButton.icon(
@@ -325,13 +285,20 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
   void _save(BuildContext context, TaskProvider taskProv) {
     if (!_formKey.currentState!.validate()) return;
+    if (_subjectName.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Введите название предмета')),
+      );
+      return;
+    }
 
     if (widget.task == null) {
       final task = Task(
         id: taskProv.newTaskId(),
         title: _titleCtrl.text.trim(),
         description: _descCtrl.text.trim(),
-        subjectId: _subjectId!,
+        subjectId: _subjectId ??
+            _subjectName.toLowerCase().replaceAll(' ', '_'),
         subjectName: _subjectName,
         deadline: _deadline,
         recommendedStartDate:
@@ -339,7 +306,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
         status: _status,
         priority: _priority,
         type: _type,
-        complexityNote: 'Оценка сложности (AI — скоро)',
         createdAt: DateTime.now(),
       );
       taskProv.addTask(task);
@@ -347,7 +313,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
       final updated = widget.task!.copyWith(
         title: _titleCtrl.text.trim(),
         description: _descCtrl.text.trim(),
-        subjectId: _subjectId!,
+        subjectId: _subjectId ??
+            _subjectName.toLowerCase().replaceAll(' ', '_'),
         subjectName: _subjectName,
         deadline: _deadline,
         recommendedStartDate:
@@ -385,6 +352,125 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Subject autocomplete field ────────────────────────────────────────────────
+
+class _SubjectAutocomplete extends StatefulWidget {
+  final TextEditingController controller;
+  final List<String> suggestions;
+  final ValueChanged<String> onSelected;
+
+  const _SubjectAutocomplete({
+    required this.controller,
+    required this.suggestions,
+    required this.onSelected,
+  });
+
+  @override
+  State<_SubjectAutocomplete> createState() => _SubjectAutocompleteState();
+}
+
+class _SubjectAutocompleteState extends State<_SubjectAutocomplete> {
+  List<String> _filtered = [];
+  bool _showList = false;
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        setState(() => _showList = false);
+        // Commit whatever is typed as the subject name
+        widget.onSelected(widget.controller.text.trim());
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    widget.onSelected(value.trim());
+    if (value.isEmpty) {
+      setState(() {
+        _filtered = [];
+        _showList = false;
+      });
+      return;
+    }
+    final q = value.toLowerCase();
+    setState(() {
+      _filtered = widget.suggestions
+          .where((s) => s.toLowerCase().contains(q))
+          .take(8)
+          .toList();
+      _showList = _filtered.isNotEmpty;
+    });
+  }
+
+  void _select(String name) {
+    widget.controller.text = name;
+    widget.onSelected(name);
+    setState(() => _showList = false);
+    _focusNode.unfocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          decoration: const InputDecoration(
+            labelText: 'Предмет *',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.school_outlined),
+            hintText: 'Начните вводить название',
+          ),
+          textCapitalization: TextCapitalization.sentences,
+          onChanged: _onChanged,
+          validator: (v) =>
+              v == null || v.trim().isEmpty ? 'Введите предмет' : null,
+        ),
+        if (_showList)
+          Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border:
+                    Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: _filtered.length,
+                itemBuilder: (ctx, i) => InkWell(
+                  onTap: () => _select(_filtered[i]),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    child: Text(_filtered[i]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

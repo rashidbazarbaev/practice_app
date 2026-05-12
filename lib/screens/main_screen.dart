@@ -6,7 +6,7 @@ import 'dashboard/dashboard_screen.dart';
 import 'calendar/calendar_screen.dart';
 import 'tasks/tasks_screen.dart';
 import 'analytics/analytics_screen.dart';
-import 'notes/notes_screen.dart';
+import 'materials/materials_screen.dart';
 import 'schedule/schedule_screen.dart';
 import 'pomodoro/pomodoro_screen.dart';
 import 'settings/settings_screen.dart';
@@ -26,7 +26,7 @@ class _MainScreenState extends State<MainScreen> {
     CalendarScreen(),
     TasksScreen(),
     ScheduleScreen(),
-    NotesScreen(),
+    MaterialsScreen(),
     AnalyticsScreen(),
   ];
 
@@ -52,9 +52,9 @@ class _MainScreenState extends State<MainScreen> {
       label: 'Расписание',
     ),
     NavigationDestination(
-      icon: Icon(Icons.note_outlined),
-      selectedIcon: Icon(Icons.note),
-      label: 'Заметки',
+      icon: Icon(Icons.folder_outlined),
+      selectedIcon: Icon(Icons.folder),
+      label: 'Материалы',
     ),
     NavigationDestination(
       icon: Icon(Icons.bar_chart_outlined),

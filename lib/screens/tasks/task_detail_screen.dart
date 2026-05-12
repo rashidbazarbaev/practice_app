@@ -153,49 +153,6 @@ class TaskDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // AI stub card
-          Card(
-            color: theme.colorScheme.secondaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.auto_awesome,
-                          color: theme.colorScheme.onSecondaryContainer,
-                          size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        'AI-анализ (заглушка)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _InfoRow(
-                    icon: Icons.timer_outlined,
-                    label: 'Оценка времени',
-                    value: task.estimatedMinutes != null
-                        ? '~${task.estimatedMinutes} мин'
-                        : 'Не оценено',
-                  ),
-                  const Divider(height: 16),
-                  _InfoRow(
-                    icon: Icons.psychology_outlined,
-                    label: 'Сложность',
-                    value: task.complexityNote ?? 'Не оценено',
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
           // Actions
           if (task.status != TaskStatus.completed)
             FilledButton.icon(

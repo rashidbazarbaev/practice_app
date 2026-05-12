@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/task_provider.dart';
+import '../../models/student.dart';
+import '../../models/subject.dart';
 import '../../models/task.dart';
 import '../../utils/color_utils.dart';
 import '../../utils/date_utils.dart';
@@ -10,10 +13,7 @@ import '../../utils/label_utils.dart';
 import '../tasks/task_form_screen.dart';
 import '../tasks/task_detail_screen.dart';
 import '../profile/profile_edit_screen.dart';
-import 'widgets/gpa_card.dart';
-import 'widgets/subject_progress_card.dart';
-import 'widgets/ai_recommendations_card.dart';
-import 'widgets/analytics_preview_card.dart';
+import '../subjects/subject_form_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -57,15 +57,20 @@ class DashboardScreen extends StatelessWidget {
                             children: [
                               GestureDetector(
                                 onTap: () {
-                                  if (student != null) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ProfileEditScreen(
-                                            student: student),
-                                      ),
-                                    );
-                                  }
+                                  final s = student ??
+                                      Student(
+                                        id: const Uuid().v4(),
+                                        name: '',
+                                        faculty: '',
+                                        course: 1,
+                                      );
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          ProfileEditScreen(student: s),
+                                    ),
+                                  );
                                 },
                                 child: Stack(
                                   children: [
@@ -159,15 +164,6 @@ class DashboardScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  // GPA Card
-                  GpaCard(
-                    gpa: student?.gpa ?? 0,
-                    completedTasks: taskProv.completedCount,
-                    totalTasks: taskProv.totalCount,
-                    overdueTasks: taskProv.overdueTasks.length,
-                  ),
-                  const SizedBox(height: 16),
-
                   // Upcoming deadlines
                   _SectionHeader(
                     title: 'Ближайшие дедлайны',
@@ -186,10 +182,15 @@ class DashboardScreen extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  // Subject progress
+                  // My subjects
                   _SectionHeader(
-                    title: 'Прогресс по предметам',
-                    onSeeAll: null,
+                    title: 'Мои предметы',
+                    onSeeAll: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const SubjectFormScreen()),
+                    ),
+                    seeAllLabel: '+ Добавить',
                   ),
                   const SizedBox(height: 8),
                   if (studentProv.subjects.isEmpty)
@@ -198,16 +199,8 @@ class DashboardScreen extends StatelessWidget {
                       message: 'Нет предметов',
                     )
                   else
-                    SubjectProgressCard(subjects: studentProv.subjects),
+                    _SubjectNamesList(subjects: studentProv.subjects),
 
-                  const SizedBox(height: 16),
-
-                  // Analytics preview
-                  const AnalyticsPreviewCard(),
-                  const SizedBox(height: 16),
-
-                  // AI Recommendations
-                  const AiRecommendationsCard(),
                   const SizedBox(height: 80),
                 ]),
               ),
@@ -230,8 +223,13 @@ class DashboardScreen extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final VoidCallback? onSeeAll;
+  final String seeAllLabel;
 
-  const _SectionHeader({required this.title, this.onSeeAll});
+  const _SectionHeader({
+    required this.title,
+    this.onSeeAll,
+    this.seeAllLabel = 'Все',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +246,7 @@ class _SectionHeader extends StatelessWidget {
         if (onSeeAll != null)
           TextButton(
             onPressed: onSeeAll,
-            child: const Text('Все'),
+            child: Text(seeAllLabel),
           ),
       ],
     );
@@ -278,6 +276,75 @@ class _EmptyCard extends StatelessWidget {
                       color: Theme.of(context).colorScheme.outline)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SubjectNamesList extends StatelessWidget {
+  final List<Subject> subjects;
+
+  const _SubjectNamesList({required this.subjects});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          children: subjects.asMap().entries.map((entry) {
+            final i = entry.key;
+            final s = entry.value;
+            final color = ColorUtils.fromHex(s.color);
+            final isLast = i == subjects.length - 1;
+            return Column(
+              children: [
+                InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SubjectFormScreen(subject: s),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            s.name,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (!isLast)
+                  const Divider(height: 1, indent: 38, endIndent: 16),
+              ],
+            );
+          }).toList(),
         ),
       ),
     );

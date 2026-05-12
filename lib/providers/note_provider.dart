@@ -23,38 +23,8 @@ class NoteProvider extends ChangeNotifier {
     if (json != null) {
       final list = jsonDecode(json) as List;
       _notes = list.map((e) => Note.fromJson(e)).toList();
-    } else {
-      _notes = _mockNotes();
     }
     notifyListeners();
-  }
-
-  List<Note> _mockNotes() {
-    final now = DateTime.now();
-    return [
-      Note(
-        id: _uuid.v4(),
-        title: 'Формулы производных',
-        content:
-            'Основные формулы:\n• (xⁿ)\' = n·xⁿ⁻¹\n• (sin x)\' = cos x\n• (cos x)\' = -sin x\n• (eˣ)\' = eˣ\n• (ln x)\' = 1/x',
-        subjectId: 'math',
-        subjectName: 'Математический анализ',
-        createdAt: now.subtract(const Duration(days: 5)),
-        updatedAt: now.subtract(const Duration(days: 2)),
-        tags: ['формулы', 'производные'],
-      ),
-      Note(
-        id: _uuid.v4(),
-        title: 'Алгоритмы сортировки',
-        content:
-            'Bubble Sort: O(n²)\nMerge Sort: O(n log n)\nQuick Sort: O(n log n) avg\nHeap Sort: O(n log n)',
-        subjectId: 'prog',
-        subjectName: 'Программирование',
-        createdAt: now.subtract(const Duration(days: 3)),
-        updatedAt: now.subtract(const Duration(days: 1)),
-        tags: ['алгоритмы', 'сортировка'],
-      ),
-    ];
   }
 
   Future<void> _saveData() async {
